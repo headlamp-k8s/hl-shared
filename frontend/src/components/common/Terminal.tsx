@@ -255,6 +255,7 @@ export default function Terminal(props: TerminalProps) {
       }
 
       const isWindows = ['Windows', 'Win16', 'Win32', 'WinCE'].indexOf(navigator?.platform) >= 0;
+      const isMac = /Mac|iPod|iPhone|iPad/.test(navigator?.platform);
       xtermRef.current = {
         xterm: new XTerminal({
           cursorBlink: true,
@@ -263,7 +264,7 @@ export default function Terminal(props: TerminalProps) {
           rows: 30, // initial rows before fit
           windowsMode: isWindows,
           allowProposedApi: true,
-          macOptionIsMeta: false,
+          macOptionIsMeta: isMac, // Enable Option key as meta on Mac for German keyboard pipe character (Option+7)
         }),
         connected: false,
         reconnectOnEnter: false,
