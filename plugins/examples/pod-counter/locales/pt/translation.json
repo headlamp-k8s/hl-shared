@@ -1,0 +1,7 @@
+{
+  "Loading…": "A carregar…",
+  "You have {{ numPods }} pods!": "Tem {{ numPods }} pods!",
+  "Custom Error Message": "Mensagem de erro personalizada",
+  "Enter the custom error message to display when the pod count cannot be retrieved.": "Insira a mensagem de erro personalizada a ser exibida quando a contagem de pods não puder ser recuperada.",
+  "Uh... pods!?": "Uh... pods!?"
+}

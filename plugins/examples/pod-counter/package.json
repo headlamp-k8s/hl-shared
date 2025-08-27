@@ -12,7 +12,8 @@
     "tsc": "headlamp-plugin tsc",
     "storybook": "headlamp-plugin storybook",
     "storybook-build": "headlamp-plugin storybook-build",
-    "test": "headlamp-plugin test"
+    "test": "headlamp-plugin test",
+    "i18n": "headlamp-plugin i18n"
   },
   "keywords": [
     "headlamp",
@@ -38,5 +39,10 @@
   },
   "overrides": {
     "typescript": "5.6.2"
+  },
+  "headlamp": {
+    "i18n": [
+      "pt"
+    ]
   }
 }

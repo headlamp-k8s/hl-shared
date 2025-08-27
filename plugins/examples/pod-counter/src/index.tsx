@@ -20,6 +20,7 @@ import {
   K8s,
   registerAppBarAction,
   registerPluginSettings,
+  useTranslation,
 } from '@kinvolk/headlamp-plugin/lib';
 import { NameValueTable } from '@kinvolk/headlamp-plugin/lib/CommonComponents';
 import Box from '@mui/material/Box';
@@ -27,8 +28,14 @@ import TextField from '@mui/material/TextField';
 import Message from './Message';
 
 function PodCounter() {
+  const { t, ready, i18n } = useTranslation();
+  console.log('PodCounter: i18n ready:', ready, 'language:', i18n?.language);
   const [pods, error] = K8s.ResourceClasses.Pod.useList();
-  const msg = pods === null ? 'Loading…' : pods.length.toString();
+  const msg =
+    pods === null
+      ? t('Loading…')
+      : t('You have {{ numPods }} pods!', { numPods: pods.length.toString() });
+  console.log('PodCounter: translated message:', msg, 'pods count:', pods?.length);
   return <Message msg={msg} error={error} />;
 }
 
@@ -65,7 +72,7 @@ registerAppBarAction(function reorderNotifications({ actions }: AppBarActionsPro
  */
 function Settings(props) {
   const { data, onDataChange } = props;
-
+  const { t } = useTranslation();
   /**
    * Handles changes to the error message input field by invoking the onDataChange callback
    * with the new error message.
@@ -78,12 +85,14 @@ function Settings(props) {
 
   const settingsRows = [
     {
-      name: 'Custom Error Message',
+      name: t('Custom Error Message'),
       value: (
         <TextField
           fullWidth
-          helperText="Enter the custom error message to display when the pod count cannot be retrieved."
-          defaultValue={data?.errorMessage ? data.errorMessage : 'Uh... pods!?'}
+          helperText={t(
+            'Enter the custom error message to display when the pod count cannot be retrieved.'
+          )}
+          defaultValue={data?.errorMessage ? data.errorMessage : t('Uh... pods!?')}
           onChange={handleChange}
           variant="standard"
         />
