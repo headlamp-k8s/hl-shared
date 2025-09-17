@@ -36,15 +36,20 @@ import { pluginsLoaded, setPluginSettings } from './pluginsSlice';
  *   means that plugins do not pollute the global namespace.
  */
 export default function Plugins() {
+  console.log('[Plugin Secret Debug] Plugins component rendered');
+  console.warn('[Plugin Secret Debug] Plugins component rendered - this should be visible');
+
   const dispatch = useDispatch();
   const { closeSnackbar, enqueueSnackbar } = useSnackbar();
   const history = useHistory();
   const { t } = useTranslation();
 
   const settingsPlugins = useTypedSelector(state => state.plugins.pluginSettings);
+  console.log('[Plugin Secret Debug] settingsPlugins from Redux:', settingsPlugins);
 
   // only run on first load
   useEffect(() => {
+    console.log('[Plugin Secret Debug] Plugins useEffect triggered');
     fetchAndExecutePlugins(
       settingsPlugins,
       updatedSettingsPackages => {

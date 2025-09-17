@@ -151,18 +151,28 @@ export function runPlugin(
   args: string[],
   values: unknown[]
 ): void {
+  console.log('[Plugin Secret Debug] runPlugin called with:', {
+    packageName,
+    packageVersion,
+    args,
+    values,
+  });
+
   // We use PrivateFunction here instead of global Function so people can't
   //   override Function and snoop on it.
   const executePlugin = new PrivateFunction(...args, source);
 
   try {
+    console.log('[Plugin Secret Debug] Executing plugin with args:', args, 'and values:', values);
     // This executes in the global scope,
     //   so the plugin can't access variables in this scope.
     // Meaning, it can NOT access "permissionSecrets".
     // Each plugin gets its own "pluginPermissionSecrets" which contains only the secrets
     //   that it is allowed to access.
     executePlugin(...values);
+    console.log('[Plugin Secret Debug] Plugin execution completed successfully');
   } catch (e) {
+    console.error('[Plugin Secret Debug] Plugin execution error:', e);
     handleError(e, packageName, packageVersion);
   }
 }
@@ -184,20 +194,36 @@ export function identifyPackages(
   pluginName: string,
   isDevelopmentMode: boolean
 ): Record<string, boolean> {
+  console.log('[Plugin Secret Debug] identifyPackages called with:', {
+    pluginPath,
+    pluginName,
+    isDevelopmentMode,
+  });
+
   // Normalize path for Windows compatibility
-  const pluginPathNormalized = pluginPath.replace(/plugins[\\/]/, 'plugins/');
+  const pluginPathNormalized = pluginPath
+    .replace(/plugins[\\/]/, 'plugins/')
+    .replace(/static-plugins[\\/]/, 'static-plugins/');
+  console.log('[Plugin Secret Debug] Normalized plugin path:', pluginPathNormalized);
 
   // For artifacthub installed packages, the package name is the folder name.
   const pluginPaths: Record<string, string[]> = {
     '@headlamp-k8s/minikube': ['plugins/headlamp_minikube', 'plugins/headlamp_minikubeprerelease'],
+    'aks-desktop': ['plugins/aks-desktop', 'static-plugins/aks-desktop'],
   };
   if (isDevelopmentMode) {
     pluginPaths['@headlamp-k8s/minikube'][pluginPaths['@headlamp-k8s/minikube'].length] =
       'plugins/minikube';
+    pluginPaths['aks-desktop'][pluginPaths['aks-desktop'].length] = 'plugins/aks-desktop';
   }
   const pluginPackageNames: Record<string, string[]> = {
     '@headlamp-k8s/minikube': ['@headlamp-k8s/minikube', '@headlamp-k8s/minikubeprerelease'],
+    'aks-desktop': ['aks-desktop'],
   };
+
+  console.log('[Plugin Secret Debug] Available plugin paths:', pluginPaths);
+  console.log('[Plugin Secret Debug] Available plugin package names:', pluginPackageNames);
+
   const isPackage: Record<string, boolean> = {};
   for (const key in pluginPaths) {
     let foundPath = false;
@@ -215,6 +241,13 @@ export function identifyPackages(
       }
     }
     isPackage[key] = foundPath && foundName;
+    console.log('[Plugin Secret Debug] Package check for', key, ':', {
+      foundPath,
+      foundName,
+      result: isPackage[key],
+    });
   }
+
+  console.log('[Plugin Secret Debug] Final package identification result:', isPackage);
   return isPackage;
 }

@@ -105,6 +105,8 @@ const QueryParamRedirect = () => {
   return null;
 };
 export default function AppContainer() {
+  console.log('[Plugin Secret Debug] AppContainer rendered');
+
   const Router = ({ children }: React.PropsWithChildren<{}>) =>
     isElectron() ? (
       <HashRouter>{children}</HashRouter>

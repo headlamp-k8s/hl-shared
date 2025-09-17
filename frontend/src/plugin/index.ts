@@ -343,6 +343,7 @@ export async function fetchAndExecutePlugins(
   onSettingsChange: (plugins: PluginInfo[]) => void,
   onIncompatible: (plugins: Record<string, PluginInfo>) => void
 ) {
+  console.log('[Plugin Secret Debug] fetchAndExecutePlugins called');
   const permissionSecretsPromise = permissionSecretsFromApp();
 
   const headers = addBackstageAuthHeaders();
@@ -350,6 +351,9 @@ export async function fetchAndExecutePlugins(
   const pluginPaths = (await fetchWithRetry(`${getAppUrl()}plugins`, headers).then(resp =>
     resp.json()
   )) as string[];
+
+  console.log('[Plugin Secret Debug] Fetched plugin paths from backend:', pluginPaths);
+  console.log('[Plugin Secret Debug] Plugin paths count:', pluginPaths.length);
 
   const sourcesPromise = Promise.all(
     pluginPaths.map(path =>
@@ -389,6 +393,12 @@ export async function fetchAndExecutePlugins(
   const sources = await sourcesPromise;
   const packageInfos = await packageInfosPromise;
   const permissionSecrets = await permissionSecretsPromise;
+
+  console.log('[Plugin Secret Debug] All data fetched:', {
+    sourcesCount: sources.length,
+    packageInfosCount: packageInfos.length,
+    permissionSecretsCount: Object.keys(permissionSecrets).length,
+  });
 
   const updatedSettingsPackages = updateSettingsPackages(packageInfos, settingsPackages);
   const settingsChanged = packageInfos.length !== settingsPackages.length;
@@ -439,8 +449,20 @@ export async function fetchAndExecutePlugins(
     isEnabled: plugin.isEnabled,
   }));
 
+  console.log(
+    '[Plugin Secret Debug] Processing plugins:',
+    packageInfos.map(p => ({ name: p.name, version: p.version }))
+  );
+  console.log('[Plugin Secret Debug] Plugin paths:', pluginPaths);
+  console.log('[Plugin Secret Debug] Sources to execute count:', sourcesToExecute.length);
+
   const infoForRunningPlugins = sourcesToExecute
     .map((source, index) => {
+      console.log('[Plugin Secret Debug] Processing plugin at index', index, ':', {
+        pluginPath: pluginPaths[index],
+        packageName: packageInfos[index].name,
+        packageVersion: packageInfos[index].version,
+      });
       return getInfoForRunningPlugins({
         source,
         pluginPath: pluginPaths[index],
@@ -449,8 +471,15 @@ export async function fetchAndExecutePlugins(
         permissionSecrets,
         handleError: handlePluginRunError,
         getAllowedPermissions: (pluginName, pluginPath, secrets): Record<string, number> => {
+          console.log('[Plugin Secret Debug] getAllowedPermissions called for:', {
+            pluginName,
+            pluginPath,
+            availableSecrets: Object.keys(secrets),
+          });
           const secretsToReturn: Record<string, number> = {};
           const isPackage = identifyPackages(pluginPath, pluginName, isDevelopmentMode);
+          console.log('[Plugin Secret Debug] Package identification result:', isPackage);
+
           if (isPackage['@headlamp-k8s/minikube']) {
             secretsToReturn['runCmd-minikube'] = secrets['runCmd-minikube'];
             if (isDevelopmentMode) {
@@ -463,12 +492,36 @@ export async function fetchAndExecutePlugins(
               secrets['runCmd-scriptjs-headlamp_minikubeprerelease/manage-minikube.js'];
           }
 
+          if (isPackage['aks-desktop']) {
+            console.log(
+              '[Plugin Secret Debug] AKS Desktop package detected, adding az and kubectl secrets'
+            );
+            secretsToReturn['runCmd-az'] = secrets['runCmd-az'];
+            secretsToReturn['runCmd-kubectl'] = secrets['runCmd-kubectl'];
+            console.log(
+              '[Plugin Secret Debug] AKS Desktop secrets added:',
+              Object.keys(secretsToReturn)
+            );
+          }
+
+          console.log(
+            '[Plugin Secret Debug] Final secrets to return:',
+            Object.keys(secretsToReturn)
+          );
           return secretsToReturn;
         },
         getArgValues: (pluginName, pluginPath, allowedPermissions) => {
+          console.log('[Plugin Secret Debug] getArgValues called for:', {
+            pluginName,
+            pluginPath,
+            allowedPermissions,
+          });
           // allowedPermissions is the return value of getAllowedPermissions
           const isPackage = identifyPackages(pluginPath, pluginName, isDevelopmentMode);
+          console.log('[Plugin Secret Debug] Package identification in getArgValues:', isPackage);
+
           if (isPackage['@headlamp-k8s/minikube']) {
+            console.log('[Plugin Secret Debug] Creating pluginRunCommand for minikube');
             // We construct a pluginRunCommand that has private
             //  - permission secrets
             //  - stored desktopApiSend and desktopApiReceive functions that can't be modified
@@ -491,6 +544,39 @@ export async function fetchAndExecutePlugins(
               [pluginRunCommand, pluginPath],
             ];
           }
+
+          if (isPackage['aks-desktop']) {
+            console.log('[Plugin Secret Debug] Creating pluginRunCommand for aks-desktop');
+            function pluginRunCommand(
+              command: 'az' | 'kubectl',
+              args: string[],
+              options: {}
+            ): ReturnType<typeof internalRunCommand> {
+              console.log('[Plugin Secret Debug] pluginRunCommand called with:', {
+                command,
+                args,
+                options,
+                allowedPermissions,
+              });
+              return internalRunCommand(
+                command,
+                args,
+                options,
+                allowedPermissions,
+                pluginDesktopApiSend,
+                pluginDesktopApiReceive
+              );
+            }
+            console.log('[Plugin Secret Debug] Returning args and values for aks-desktop:', [
+              ['pluginRunCommand', 'pluginPath'],
+              [pluginRunCommand, pluginPath],
+            ]);
+            return [
+              ['pluginRunCommand', 'pluginPath'],
+              [pluginRunCommand, pluginPath],
+            ];
+          }
+          console.log('[Plugin Secret Debug] No matching package found, returning empty arrays');
           return [[], []];
         },
         PrivateFunction,
@@ -509,7 +595,18 @@ export async function fetchAndExecutePlugins(
     return 0;
   });
 
-  infoForRunningPlugins.forEach(runPluginInner);
+  console.log('[Plugin Secret Debug] About to execute', infoForRunningPlugins.length, 'plugins');
+  infoForRunningPlugins.forEach((pluginInfo, index) => {
+    console.log(
+      '[Plugin Secret Debug] Executing plugin',
+      index,
+      'with args:',
+      pluginInfo[5],
+      'and values:',
+      pluginInfo[6]
+    );
+    runPluginInner(pluginInfo);
+  });
 
   // Initialize plugin i18n after plugins are loaded
   await initializePluginsI18n(packageInfos, pluginPaths);
@@ -564,15 +661,19 @@ async function afterPluginsRun(
  * @returns promise with permissions secrets like { 'runCmd-minikube': 1235555 }
  */
 export async function permissionSecretsFromApp(): Promise<Record<string, number>> {
+  console.log('[Plugin Secret Debug] permissionSecretsFromApp called');
   const { desktopApi } = window;
   if (desktopApi) {
+    console.log('[Plugin Secret Debug] desktopApi available, requesting permission secrets');
     return new Promise(resolve => {
       desktopApi.receive('plugin-permission-secrets', (secrets: Record<string, number>) => {
+        console.log('[Plugin Secret Debug] Received permission secrets:', Object.keys(secrets));
         resolve(secrets);
       });
       desktopApi.send('request-plugin-permission-secrets');
     });
   } else {
+    console.log('[Plugin Secret Debug] desktopApi not available, returning empty secrets');
     return new Promise(resolve => resolve({}));
   }
 }

@@ -140,6 +140,14 @@ const COMMANDS_WITH_CONSENT = {
     'scriptjs headlamp_minikube/manage-minikube.js',
     'scriptjs minikube/manage-minikube.js',
   ],
+  aks_desktop: [
+    'az aks',
+    'az aks get-credentials',
+    'az aks list',
+    'az aks show',
+    'az aks create',
+    'kubectl config current-context',
+  ],
 };
 /**
  * Adds the runCmd consent for the plugin.
@@ -248,22 +256,29 @@ export function handleRunCommand(
   mainWindow: BrowserWindow | null,
   permissionSecrets: Record<string, number>
 ): void {
+  console.log('[Plugin Secret Debug] handleRunCommand called with:', {
+    eventData,
+    permissionSecrets,
+  });
+
   if (mainWindow === null) {
     console.error('Main window is null, cannot run command');
     return;
   }
   const [isValid, errorMessage] = validateCommandData(eventData);
   if (!isValid) {
-    console.error(errorMessage);
+    console.error('[Plugin Secret Debug] Command validation failed:', errorMessage);
     return;
   }
   const commandData = eventData as CommandData;
+  console.log('[Plugin Secret Debug] Command data validated:', commandData);
 
   const [permissionsValid, permissionError] = checkPermissionSecret(commandData, permissionSecrets);
   if (!permissionsValid) {
-    console.error(permissionError);
+    console.error('[Plugin Secret Debug] Permission check failed:', permissionError);
     return;
   }
+  console.log('[Plugin Secret Debug] Permission check passed');
 
   if (!checkCommandConsent(commandData.command, commandData.args, mainWindow)) {
     return;
@@ -350,12 +365,29 @@ export function setupRunCmdHandlers(mainWindow: BrowserWindow | null, ipcMain: E
     'runCmd-scriptjs-minikube/manage-minikube.js': cryptoRandom(),
     'runCmd-scriptjs-headlamp_minikube/manage-minikube.js': cryptoRandom(),
     'runCmd-scriptjs-headlamp_minikubeprerelease/manage-minikube.js': cryptoRandom(),
+    'runCmd-az': cryptoRandom(),
+    'runCmd-kubectl': cryptoRandom(),
   };
 
+  console.log(
+    '[Plugin Secret Debug] Setting up run command handlers with permission secrets:',
+    Object.keys(permissionSecrets)
+  );
+
   ipcMain.on('request-plugin-permission-secrets', function giveSecrets() {
+    console.log(
+      '[Plugin Secret Debug] Plugin permission secrets requested, sent:',
+      pluginPermissionSecretsSent
+    );
     if (!pluginPermissionSecretsSent) {
       pluginPermissionSecretsSent = true;
+      console.log(
+        '[Plugin Secret Debug] Sending plugin permission secrets to renderer:',
+        permissionSecrets
+      );
       mainWindow?.webContents.send('plugin-permission-secrets', permissionSecrets);
+    } else {
+      console.log('[Plugin Secret Debug] Permission secrets already sent, ignoring request');
     }
   });
 
@@ -366,9 +398,10 @@ export function setupRunCmdHandlers(mainWindow: BrowserWindow | null, ipcMain: E
     }
   });
 
-  ipcMain.on('run-command', (event, eventData) =>
-    handleRunCommand(event, eventData, mainWindow, permissionSecrets)
-  );
+  ipcMain.on('run-command', (event, eventData) => {
+    console.log('[Plugin Secret Debug] Run command received:', eventData);
+    handleRunCommand(event, eventData, mainWindow, permissionSecrets);
+  });
 }
 
 /**
@@ -404,7 +437,7 @@ export function validateCommandData(eventData: CommandDataPartial): [boolean, st
     }
   }
 
-  const validCommands = ['minikube', 'az', 'scriptjs'];
+  const validCommands = ['minikube', 'az', 'scriptjs', 'kubectl'];
 
   if (!validCommands.includes(eventData.command)) {
     return [
