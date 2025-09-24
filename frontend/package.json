@@ -4,7 +4,7 @@
   "private": true,
   "productName": "Headlamp",
   "engines": {
-    "npm": ">=10.0.0",
+    "pnpm": ">=8.0.0",
     "node": ">=20.11.1"
   },
   "type": "module",
@@ -90,26 +90,20 @@
     "vite-plugin-static-copy": "^3.1.2",
     "vite-plugin-svgr": "^4.3.0"
   },
-  "overrides": {
-    "axe-core": "npm:dry-uninstall",
-    "domain-browser": "npm:dry-uninstall",
-    "typescript": "5.6.2",
-    "cheerio": "1.0.0-rc.12"
-  },
   "optionalDependencies": {
     "@rollup/rollup-darwin-arm64": "*",
     "@rollup/rollup-linux-x64-gnu": "*",
     "@rollup/rollup-win32-x64-msvc": "*"
   },
   "scripts": {
-    "prestart": "npm run make-version",
+    "prestart": "pnpm run make-version",
     "start": "cross-env REACT_APP_HEADLAMP_BACKEND_TOKEN=headlamp vite",
     "preview": "vite preview",
-    "prebuild": "npm run make-version",
-    "build": "cross-env PUBLIC_URL=./ NODE_OPTIONS=--max-old-space-size=8096 vite build && npx shx rm -f build/frontend/index.baseUrl.html",
-    "pretest": "npm run make-version",
+    "prebuild": "pnpm run make-version",
+    "build": "cross-env PUBLIC_URL=./ NODE_OPTIONS=--max-old-space-size=8096 vite build && pnpm exec shx rm -f build/frontend/index.baseUrl.html",
+    "pretest": "pnpm run make-version",
     "test": "vitest",
-    "start-without-multiplexer": "cross-env REACT_APP_ENABLE_WEBSOCKET_MULTIPLEXER=false npm run start",
+    "start-without-multiplexer": "cross-env REACT_APP_ENABLE_WEBSOCKET_MULTIPLEXER=false pnpm run start",
     "lint": "eslint --cache -c package.json --ext .js,.ts,.tsx src/ ../app/electron ../plugins/headlamp-plugin --ignore-pattern ../plugins/headlamp-plugin/template --ignore-pattern ../plugins/headlamp-plugin/lib/",
     "format": "prettier --config package.json --write --cache src ../app/electron ../app/tsconfig.json ../app/scripts ../plugins/headlamp-plugin/bin ../plugins/headlamp-plugin/config ../plugins/headlamp-plugin/template ../plugins/headlamp-plugin/test*.js ../plugins/headlamp-plugin/*.json ../plugins/headlamp-plugin/*.js",
     "format-check": "prettier --config package.json --check --cache src ../app/electron ../app/tsconfig.json ../app/scripts ../plugins/headlamp-plugin/bin ../plugins/headlamp-plugin/config ../plugins/headlamp-plugin/template ../plugins/headlamp-plugin/test*.js ../plugins/headlamp-plugin/*.json ../plugins/headlamp-plugin/*.js",
